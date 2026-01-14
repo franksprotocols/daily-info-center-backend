@@ -28,6 +28,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Daily Info Center API is running' });
 });
 
+// Debug endpoint to check environment variables
+app.get('/api/debug/env', (req, res) => {
+  res.json({
+    hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
+    hasGoogleSearchKey: !!process.env.GOOGLE_SEARCH_API_KEY,
+    hasGoogleSearchEngineId: !!process.env.GOOGLE_SEARCH_ENGINE_ID,
+    hasPostgresUrl: !!process.env.POSTGRES_URL,
+    nodeEnv: process.env.NODE_ENV,
+    anthropicKeyPrefix: process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.substring(0, 10) + '...' : 'missing'
+  });
+});
+
 // Initialize database
 initDatabase()
   .then(() => {
