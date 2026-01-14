@@ -68,6 +68,7 @@ router.post('/', async (req, res) => {
             });
           } catch (langError) {
             console.error(`  ✗ Error generating ${language} article for ${topic.name}:`, langError.message);
+            console.error(`  Full error:`, langError);
             results.push({
               topic: topic.name,
               language,
@@ -79,6 +80,7 @@ router.post('/', async (req, res) => {
         console.log(`  ✓ Completed: ${topic.name}`);
       } catch (error) {
         console.error(`  ✗ Error processing topic ${topic.name}:`, error.message);
+        console.error(`  Full error:`, error);
         results.push({
           topic: topic.name,
           error: error.message
