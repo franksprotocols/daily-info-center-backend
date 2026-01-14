@@ -1,0 +1,12 @@
+node_modules
+*.sqlite
+.env
+.env.local
+.DS_Store
+audio
+frontend
+.vercel
+wrangler.toml.backup
+src.cloudflare
+migrations.cloudflare
+init-neon-db.js

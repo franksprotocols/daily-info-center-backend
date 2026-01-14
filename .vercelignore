@@ -1,0 +1,6 @@
+node_modules
+*.sqlite
+.env.local
+.DS_Store
+audio
+frontend

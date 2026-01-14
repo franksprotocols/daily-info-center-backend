@@ -1,0 +1,57 @@
+import express from 'express';
+import { getAllDates, getArticlesByDate, getArticleById } from '../database-selector.js';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const router = express.Router();
+
+// Get all dates with articles
+router.get('/dates', async (req, res) => {
+  try {
+    const dates = await getAllDates();
+    res.json(dates);
+  } catch (error) {
+    console.error('Error fetching dates:', error);
+    res.status(500).json({ error: 'Failed to fetch dates' });
+  }
+});
+
+// Get articles for a specific date
+router.get('/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const articles = await getArticlesByDate(date);
+    res.json(articles);
+  } catch (error) {
+    console.error('Error fetching articles:', error);
+    res.status(500).json({ error: 'Failed to fetch articles' });
+  }
+});
+
+// Get article details by ID
+router.get('/detail/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const article = await getArticleById(parseInt(id));
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+    res.json(article);
+  } catch (error) {
+    console.error('Error fetching article:', error);
+    res.status(500).json({ error: 'Failed to fetch article' });
+  }
+});
+
+// Serve audio files
+router.get('/audio/:filename', (req, res) => {
+  const { filename } = req.params;
+  const audioPath = join(__dirname, '..', 'audio', filename);
+  res.sendFile(audioPath);
+});
+
+export default router;
