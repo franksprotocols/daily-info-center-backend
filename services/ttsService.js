@@ -43,9 +43,19 @@ export async function generateSpeech(text, filename) {
   } catch (error) {
     console.error('TTS error details:', {
       message: error.message,
-      status: error.statusCode,
-      body: error.body
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      stack: error.stack
     });
-    throw new Error(`Failed to generate speech: ${error.statusCode || error.message}`);
+
+    // More specific error messages
+    if (error.response?.status === 401) {
+      throw new Error('ElevenLabs API key is invalid or expired. Please check your ELEVENLABS_API_KEY.');
+    } else if (error.response?.status === 429) {
+      throw new Error('ElevenLabs rate limit exceeded. Please try again later.');
+    } else {
+      throw new Error(`Failed to generate speech: ${error.response?.status || error.message}`);
+    }
   }
 }
