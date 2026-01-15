@@ -1,8 +1,9 @@
 import axios from 'axios';
-import { writeFile } from 'fs/promises';
+import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -38,7 +39,13 @@ export async function generateSpeech(text, filename) {
       }
     );
 
-    const audioPath = join(__dirname, '..', 'audio', filename);
+    const audioDir = join(__dirname, '..', 'audio');
+    // Create audio directory if it doesn't exist
+    if (!existsSync(audioDir)) {
+      await mkdir(audioDir, { recursive: true });
+    }
+
+    const audioPath = join(audioDir, filename);
     await writeFile(audioPath, response.data);
 
     return filename;
