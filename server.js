@@ -35,8 +35,10 @@ app.get('/api/debug/env', (req, res) => {
     hasGoogleSearchKey: !!process.env.GOOGLE_SEARCH_API_KEY,
     hasGoogleSearchEngineId: !!process.env.GOOGLE_SEARCH_ENGINE_ID,
     hasPostgresUrl: !!process.env.POSTGRES_URL,
+    hasElevenLabsKey: !!process.env.ELEVENLABS_API_KEY,
     nodeEnv: process.env.NODE_ENV,
-    anthropicKeyPrefix: process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.substring(0, 10) + '...' : 'missing'
+    anthropicKeyPrefix: process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.substring(0, 10) + '...' : 'missing',
+    elevenLabsKeyPrefix: process.env.ELEVENLABS_API_KEY ? process.env.ELEVENLABS_API_KEY.substring(0, 10) + '...' : 'missing'
   });
 });
 
