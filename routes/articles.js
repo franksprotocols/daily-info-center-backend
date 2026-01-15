@@ -1,5 +1,6 @@
 import express from 'express';
 import { getAllDates, getArticlesByDate, getArticleById } from '../database-selector.js';
+import { generateSpeech } from '../services/ttsService.js';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -44,6 +45,26 @@ router.get('/detail/:id', async (req, res) => {
   } catch (error) {
     console.error('Error fetching article:', error);
     res.status(500).json({ error: 'Failed to fetch article' });
+  }
+});
+
+// Generate TTS for article
+router.post('/tts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const article = await getArticleById(parseInt(id));
+
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    const filename = `article_${id}_${Date.now()}.mp3`;
+    await generateSpeech(article.content, filename);
+
+    res.json({ audioUrl: `/api/articles/audio/${filename}` });
+  } catch (error) {
+    console.error('Error generating TTS:', error);
+    res.status(500).json({ error: 'Failed to generate audio' });
   }
 });
 
