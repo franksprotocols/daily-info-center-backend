@@ -50,7 +50,13 @@ export async function generateSpeech(text, filename) {
 
     return filename;
   } catch (error) {
-    console.error('TTS error:', error.response?.data || error.message);
-    throw new Error('Failed to generate speech');
+    console.error('TTS error details:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data?.toString(),
+      headers: error.response?.headers
+    });
+    throw new Error(`Failed to generate speech: ${error.response?.status || error.message}`);
   }
 }
