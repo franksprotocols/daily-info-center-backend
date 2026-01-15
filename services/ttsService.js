@@ -15,6 +15,13 @@ export async function generateSpeech(text, filename) {
     throw new Error('ElevenLabs API key not configured');
   }
 
+  console.log('TTS Debug:', {
+    hasKey: !!apiKey,
+    keyLength: apiKey?.length,
+    keyPrefix: apiKey?.substring(0, 10),
+    textLength: text?.length
+  });
+
   // Set API key
   elevenLabs.setApiKey(apiKey);
 
