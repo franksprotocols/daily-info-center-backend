@@ -1,6 +1,5 @@
 import elevenLabs from 'elevenlabs-js';
 import { mkdir } from 'fs/promises';
-import { createWriteStream } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -31,29 +30,16 @@ export async function generateSpeech(text, filename) {
 
     const audioPath = join(audioDir, filename);
 
-    // Generate TTS and pipe to file
-    return new Promise((resolve, reject) => {
-      const audioStream = elevenLabs.textToSpeech(voiceId, text, 'eleven_multilingual_v2', {
-        stability: 0.5,
-        similarity_boost: 0.75
-      });
-
-      const writeStream = createWriteStream(audioPath);
-
-      audioStream.pipe(writeStream);
-
-      writeStream.on('finish', () => {
-        resolve(filename);
-      });
-
-      writeStream.on('error', (error) => {
-        reject(new Error(`Failed to write audio file: ${error.message}`));
-      });
-
-      audioStream.on('error', (error) => {
-        reject(new Error(`Failed to generate speech: ${error.message}`));
-      });
+    // Generate TTS and save to file
+    const audioResult = await elevenLabs.textToSpeech(voiceId, text, 'eleven_multilingual_v2', {
+      stability: 0.5,
+      similarity_boost: 0.75
     });
+
+    // Use the saveFile method to save the audio
+    await audioResult.saveFile(audioPath);
+
+    return filename;
   } catch (error) {
     console.error('TTS error details:', {
       message: error.message,
