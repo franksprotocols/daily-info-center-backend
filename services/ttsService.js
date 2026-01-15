@@ -1,4 +1,4 @@
-import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
+import { FishAudioClient } from 'fish-audio';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
@@ -9,10 +9,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export async function generateSpeech(text, filename) {
-  const apiKey = process.env.ELEVENLABS_API_KEY;
+  const apiKey = process.env.FISH_API_KEY;
 
   if (!apiKey) {
-    throw new Error('ElevenLabs API key not configured');
+    throw new Error('Fish Audio API key not configured');
   }
 
   console.log('TTS Debug:', {
@@ -22,12 +22,13 @@ export async function generateSpeech(text, filename) {
     textLength: text?.length
   });
 
-  const elevenlabs = new ElevenLabsClient({
+  const fishAudio = new FishAudioClient({
     apiKey: apiKey
   });
 
-  // Using Rachel voice
-  const voiceId = '21m00Tcm4TlvDq8ikWAM';
+  // Optional: specify a reference_id for a custom voice
+  // Leave empty to use default voice
+  // const referenceId = 'your_voice_model_id';
 
   try {
     const audioDir = join(__dirname, '..', 'audio');
@@ -38,11 +39,13 @@ export async function generateSpeech(text, filename) {
 
     const audioPath = join(audioDir, filename);
 
-    // Generate TTS using official SDK
-    const audio = await elevenlabs.textToSpeech.convert(voiceId, {
+    // Generate TTS using official Fish Audio SDK
+    const audio = await fishAudio.textToSpeech.convert({
       text: text,
-      model_id: 'eleven_multilingual_v2',
-      output_format: 'mp3_44100_128'
+      format: 'mp3',
+      // reference_id: referenceId, // Uncomment and set if using custom voice
+      latency: 'balanced',
+      normalize: true
     });
 
     // Convert audio stream to buffer and save
@@ -57,19 +60,20 @@ export async function generateSpeech(text, filename) {
   } catch (error) {
     console.error('TTS error details:', {
       message: error.message,
-      status: error.response?.status,
+      status: error.status || error.response?.status,
       statusText: error.response?.statusText,
       data: error.response?.data,
       stack: error.stack
     });
 
     // More specific error messages
-    if (error.response?.status === 401) {
-      throw new Error('ElevenLabs API key is invalid or expired. Please check your ELEVENLABS_API_KEY.');
-    } else if (error.response?.status === 429) {
-      throw new Error('ElevenLabs rate limit exceeded. Please try again later.');
+    const status = error.status || error.response?.status;
+    if (status === 401) {
+      throw new Error('Fish Audio API key is invalid or expired. Please check your FISH_API_KEY.');
+    } else if (status === 429) {
+      throw new Error('Fish Audio rate limit exceeded. Please try again later.');
     } else {
-      throw new Error(`Failed to generate speech: ${error.response?.status || error.message}`);
+      throw new Error(`Failed to generate speech: ${status || error.message}`);
     }
   }
 }
