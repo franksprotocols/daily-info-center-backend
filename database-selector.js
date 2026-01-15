@@ -22,5 +22,6 @@ export const {
   checkArticleExists,
   getAllDates,
   getArticlesByDate,
-  getArticleById
+  getArticleById,
+  updateArticleAudioUrl
 } = database;

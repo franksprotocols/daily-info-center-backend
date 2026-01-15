@@ -148,3 +148,11 @@ export async function getArticleById(id) {
     sources: JSON.parse(rows[0].sources)
   };
 }
+
+export async function updateArticleAudioUrl(id, audioUrl) {
+  const { rows } = await pool.query(
+    'UPDATE articles SET voice_file_path = $1 WHERE id = $2 RETURNING *',
+    [audioUrl, id]
+  );
+  return rows[0];
+}

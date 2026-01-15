@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllDates, getArticlesByDate, getArticleById } from '../database-selector.js';
+import { getAllDates, getArticlesByDate, getArticleById, updateArticleAudioUrl } from '../database-selector.js';
 import { generateSpeech } from '../services/ttsService.js';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
@@ -58,10 +58,30 @@ router.post('/tts/:id', async (req, res) => {
       return res.status(404).json({ error: 'Article not found' });
     }
 
+    // Check if audio already exists
+    if (article.voice_file_path) {
+      console.log(`Audio already exists for article ${id}: ${article.voice_file_path}`);
+      return res.json({
+        audioUrl: article.voice_file_path,
+        cached: true
+      });
+    }
+
+    // Generate new audio
+    console.log(`Generating new audio for article ${id}...`);
     const filename = `article_${id}_${Date.now()}.mp3`;
     await generateSpeech(article.content, filename);
 
-    res.json({ audioUrl: `/articles/audio/${filename}` });
+    const audioUrl = `/articles/audio/${filename}`;
+
+    // Save audio URL to database
+    await updateArticleAudioUrl(parseInt(id), audioUrl);
+    console.log(`Audio URL saved to database for article ${id}`);
+
+    res.json({
+      audioUrl,
+      cached: false
+    });
   } catch (error) {
     console.error('Error generating TTS:', error.message);
     res.status(500).json({ error: 'Failed to generate audio', details: error.message });

@@ -188,4 +188,17 @@ export function getArticleById(id) {
   });
 }
 
+export function updateArticleAudioUrl(id, audioUrl) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'UPDATE articles SET voice_file_path = ? WHERE id = ?',
+      [audioUrl, id],
+      function(err) {
+        if (err) reject(err);
+        else resolve({ id, audioUrl, changes: this.changes });
+      }
+    );
+  });
+}
+
 export default db;
