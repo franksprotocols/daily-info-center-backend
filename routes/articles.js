@@ -61,7 +61,7 @@ router.post('/tts/:id', async (req, res) => {
     const filename = `article_${id}_${Date.now()}.mp3`;
     await generateSpeech(article.content, filename);
 
-    res.json({ audioUrl: `/api/articles/audio/${filename}` });
+    res.json({ audioUrl: `/articles/audio/${filename}` });
   } catch (error) {
     console.error('Error generating TTS:', error.message);
     res.status(500).json({ error: 'Failed to generate audio', details: error.message });
