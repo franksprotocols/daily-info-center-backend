@@ -1,5 +1,5 @@
-import elevenLabs from 'elevenlabs-js';
-import { mkdir } from 'fs/promises';
+import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
+import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -22,8 +22,9 @@ export async function generateSpeech(text, filename) {
     textLength: text?.length
   });
 
-  // Set API key
-  elevenLabs.setApiKey(apiKey);
+  const elevenlabs = new ElevenLabsClient({
+    apiKey: apiKey
+  });
 
   // Using Rachel voice
   const voiceId = '21m00Tcm4TlvDq8ikWAM';
@@ -37,14 +38,20 @@ export async function generateSpeech(text, filename) {
 
     const audioPath = join(audioDir, filename);
 
-    // Generate TTS and save to file
-    const audioResult = await elevenLabs.textToSpeech(voiceId, text, 'eleven_multilingual_v2', {
-      stability: 0.5,
-      similarity_boost: 0.75
+    // Generate TTS using official SDK
+    const audio = await elevenlabs.textToSpeech.convert(voiceId, {
+      text: text,
+      model_id: 'eleven_multilingual_v2',
+      output_format: 'mp3_44100_128'
     });
 
-    // Use the saveFile method to save the audio
-    await audioResult.saveFile(audioPath);
+    // Convert audio stream to buffer and save
+    const chunks = [];
+    for await (const chunk of audio) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
+    await writeFile(audioPath, buffer);
 
     return filename;
   } catch (error) {
