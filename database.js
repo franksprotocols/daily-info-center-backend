@@ -316,7 +316,19 @@ export function getSocialArticleDates() {
       'SELECT DISTINCT scraped_at FROM social_articles ORDER BY scraped_at DESC',
       (err, rows) => {
         if (err) reject(err);
-        else resolve(rows.map(row => row.scraped_at));
+        else {
+          // Ensure dates are returned as YYYY-MM-DD strings
+          const dates = rows.map(row => {
+            const date = row.scraped_at;
+            // If it's already a string in correct format, return as-is
+            if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+              return date;
+            }
+            // Otherwise convert to proper format
+            return new Date(date).toISOString().split('T')[0];
+          });
+          resolve(dates);
+        }
       }
     );
   });

@@ -256,7 +256,11 @@ export async function checkSocialArticleExists(sourceUrl) {
 
 export async function getSocialArticleDates() {
   const { rows } = await pool.query('SELECT DISTINCT scraped_at FROM social_articles ORDER BY scraped_at DESC');
-  return rows.map(row => row.scraped_at);
+  return rows.map(row => {
+    // Convert date to YYYY-MM-DD string format
+    const date = new Date(row.scraped_at);
+    return date.toISOString().split('T')[0];
+  });
 }
 
 export async function getSocialArticlesByDate(date) {
