@@ -23,5 +23,17 @@ export const {
   getAllDates,
   getArticlesByDate,
   getArticleById,
-  updateArticleAudioUrl
+  updateArticleAudioUrl,
+  // Social content functions
+  getAllSocialInterests,
+  addSocialInterest,
+  updateSocialInterest,
+  deleteSocialInterest,
+  saveSocialArticle,
+  checkSocialArticleExists,
+  getSocialArticleDates,
+  getSocialArticlesByDate,
+  getSocialArticleById,
+  updateSocialArticleSummary,
+  deleteSocialArticle
 } = database;
