@@ -1,12 +1,28 @@
 import pg from 'pg';
 const { Pool } = pg;
 
-// Create a connection pool
+// Create a connection pool with error handling
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
   ssl: {
     rejectUnauthorized: false
-  }
+  },
+  max: 20, // Maximum number of clients in the pool
+  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+  connectionTimeoutMillis: 10000, // Return error after 10 seconds if connection could not be established
+});
+
+// Handle pool errors to prevent crashes
+pool.on('error', (err, client) => {
+  console.error('Unexpected error on idle database client', err);
+  // Don't exit process, just log the error
+});
+
+// Handle connection errors
+pool.on('connect', (client) => {
+  client.on('error', (err) => {
+    console.error('Database client error', err);
+  });
 });
 
 // Initialize database schema
