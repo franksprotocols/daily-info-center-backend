@@ -8,6 +8,9 @@ export async function generateArticle(topic, language = 'en') {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.0-flash-exp',
+    tools: [{
+      googleSearch: {}  // Enable Google Search grounding for real-time information
+    }],
     generationConfig: {
       temperature: 0.7,
       maxOutputTokens: 2048,
@@ -18,21 +21,30 @@ export async function generateArticle(topic, language = 'en') {
     ? 'Please write the article in Chinese (简体中文).'
     : 'Please write the article in English.';
 
-  const prompt = `You are a skilled journalist and analyst. Research and write a comprehensive article about "${topic}" based on the latest information.
+  // Get today's date for the prompt
+  const today = new Date().toISOString().split('T')[0];
+
+  const prompt = `You are a skilled journalist and analyst. Research and write a comprehensive article about "${topic}" based on the LATEST and MOST RECENT information available.
+
+Today's date is: ${today}
 
 ${languageInstruction}
 
+IMPORTANT: Use Google Search to find the most recent news, developments, and updates from the past 24-48 hours about ${topic}. Focus on breaking news, latest announcements, and current events.
+
 Please:
-1. Search for the latest developments and news about ${topic}
+1. Search the web for the latest developments and news about ${topic} (prioritize news from the last 24-48 hours)
 2. Summarize key information and recent developments
 3. Identify important trends and patterns
 4. Provide meaningful analysis and insights
 5. Maintain an objective, informative tone
+6. Include specific dates, events, and data points from recent news
 
 Format the article with:
 - Start with "Headline: [compelling headline]"
 - Then write a 300-500 word article suitable for voice narration
 - Be informative and engaging
+- Focus on what's happening NOW, not historical context
 
 Write the article now:`;
 
@@ -54,10 +66,28 @@ Write the article now:`;
     // Remove the headline line from content
     const content = fullText.replace(/Headline:\s*.+?(?:\n|$)/i, '').trim();
 
+    // Extract sources from grounding metadata
+    let sources = [];
+    try {
+      const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
+      if (groundingMetadata?.groundingChunks) {
+        sources = groundingMetadata.groundingChunks
+          .filter(chunk => chunk.web?.uri)
+          .map(chunk => chunk.web.uri);
+      }
+
+      // Remove duplicates
+      sources = [...new Set(sources)];
+
+      console.log(`Generated article for "${topic}" with ${sources.length} sources from Google Search`);
+    } catch (sourceError) {
+      console.warn('Could not extract grounding sources:', sourceError.message);
+    }
+
     return {
       headline,
       content,
-      sources: [] // Gemini uses its built-in knowledge, no explicit sources
+      sources: sources // Real sources from Google Search
     };
   } catch (error) {
     console.error('Gemini API error:', error.message);
