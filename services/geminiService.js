@@ -58,3 +58,36 @@ Write the article now:`;
     throw new Error(`Failed to generate article for topic: ${topic}`);
   }
 }
+
+export async function generateSocialSummary(articleContent) {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('Gemini API key not configured');
+  }
+
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash-exp',
+    generationConfig: {
+      temperature: 0.5,
+      maxOutputTokens: 500,
+    }
+  });
+
+  const prompt = `Summarize the following article in 150-250 words. Focus on the key points, main ideas, and most important information. Write in a clear, concise style suitable for quick reading.
+
+Article content:
+${articleContent}
+
+Summary:`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const summary = response.text().trim();
+
+    return summary;
+  } catch (error) {
+    console.error('Gemini summary generation error:', error.message);
+    throw new Error('Failed to generate summary');
+  }
+}

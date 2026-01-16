@@ -40,6 +40,37 @@ export async function initDatabase() {
       )
     `);
 
+    // Create social_interests table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS social_interests (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create social_articles table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS social_articles (
+        id SERIAL PRIMARY KEY,
+        interest_id INTEGER NOT NULL,
+        source_url TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        summary TEXT,
+        author TEXT,
+        publish_date DATE,
+        scraped_at DATE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (interest_id) REFERENCES social_interests(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Create indexes for social_articles
+    await client.query('CREATE INDEX IF NOT EXISTS idx_social_articles_scraped_at ON social_articles(scraped_at)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_social_articles_interest_id ON social_articles(interest_id)');
+
     // Insert default topics if they don't exist
     const defaultTopics = ['Politics', 'Macro Economy Data', 'AI', 'EV', 'Stock Market'];
 
@@ -155,4 +186,95 @@ export async function updateArticleAudioUrl(id, audioUrl) {
     [audioUrl, id]
   );
   return rows[0];
+}
+
+// Social Interests CRUD operations
+export async function getAllSocialInterests() {
+  const { rows } = await pool.query('SELECT * FROM social_interests ORDER BY created_at ASC');
+  return rows;
+}
+
+export async function getActiveSocialInterests() {
+  const { rows } = await pool.query('SELECT * FROM social_interests WHERE is_active = true ORDER BY created_at ASC');
+  return rows;
+}
+
+export async function addSocialInterest(name) {
+  const { rows } = await pool.query(
+    'INSERT INTO social_interests (name, is_active) VALUES ($1, true) RETURNING *',
+    [name]
+  );
+  return rows[0];
+}
+
+export async function updateSocialInterest(id, name, isActive) {
+  const { rows } = await pool.query(
+    'UPDATE social_interests SET name = $1, is_active = $2 WHERE id = $3 RETURNING *',
+    [name, isActive, id]
+  );
+  return rows[0];
+}
+
+export async function deleteSocialInterest(id) {
+  const { rowCount } = await pool.query('DELETE FROM social_interests WHERE id = $1', [id]);
+  return { deleted: rowCount };
+}
+
+// Social Articles CRUD operations
+export async function saveSocialArticle(data) {
+  const { interestId, sourceUrl, title, content, author, publishDate, scrapedAt } = data;
+  const { rows } = await pool.query(
+    'INSERT INTO social_articles (interest_id, source_url, title, content, author, publish_date, scraped_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+    [interestId, sourceUrl, title, content, author, publishDate, scrapedAt]
+  );
+  return { id: rows[0].id };
+}
+
+export async function checkSocialArticleExists(sourceUrl) {
+  const { rows } = await pool.query(
+    'SELECT id FROM social_articles WHERE source_url = $1',
+    [sourceUrl]
+  );
+  return rows.length > 0;
+}
+
+export async function getSocialArticleDates() {
+  const { rows } = await pool.query('SELECT DISTINCT scraped_at FROM social_articles ORDER BY scraped_at DESC');
+  return rows.map(row => row.scraped_at);
+}
+
+export async function getSocialArticlesByDate(date) {
+  const { rows } = await pool.query(
+    `SELECT sa.*, si.name as interest_name
+     FROM social_articles sa
+     JOIN social_interests si ON sa.interest_id = si.id
+     WHERE sa.scraped_at = $1
+     ORDER BY sa.created_at DESC`,
+    [date]
+  );
+  return rows;
+}
+
+export async function getSocialArticleById(id) {
+  const { rows } = await pool.query(
+    `SELECT sa.*, si.name as interest_name
+     FROM social_articles sa
+     JOIN social_interests si ON sa.interest_id = si.id
+     WHERE sa.id = $1`,
+    [id]
+  );
+  return rows.length > 0 ? rows[0] : null;
+}
+
+export async function updateSocialArticleSummary(id, summary) {
+  const { rows } = await pool.query(
+    'UPDATE social_articles SET summary = $1 WHERE id = $2 RETURNING *',
+    [summary, id]
+  );
+  return rows[0];
+}
+
+export async function deleteSocialArticle(id) {
+  const { rowCount } = await pool.query('DELETE FROM social_articles WHERE id = $1', [id]);
+  return { deleted: rowCount };
 }

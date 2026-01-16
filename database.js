@@ -38,6 +38,37 @@ export function initDatabase() {
         )
       `);
 
+      // Create social_interests table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS social_interests (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          is_active BOOLEAN DEFAULT 1,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Create social_articles table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS social_articles (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          interest_id INTEGER NOT NULL,
+          source_url TEXT NOT NULL UNIQUE,
+          title TEXT NOT NULL,
+          content TEXT NOT NULL,
+          summary TEXT,
+          author TEXT,
+          publish_date DATE,
+          scraped_at DATE NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (interest_id) REFERENCES social_interests(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Create indexes for social_articles
+      db.run('CREATE INDEX IF NOT EXISTS idx_social_articles_scraped_at ON social_articles(scraped_at)');
+      db.run('CREATE INDEX IF NOT EXISTS idx_social_articles_interest_id ON social_articles(interest_id)');
+
       // Insert default topics if they don't exist
       const defaultTopics = ['Politics', 'Macro Economy Data', 'AI', 'EV', 'Stock Market'];
       const stmt = db.prepare('INSERT OR IGNORE INTO topics (name, is_active) VALUES (?, 1)');
@@ -198,6 +229,151 @@ export function updateArticleAudioUrl(id, audioUrl) {
         else resolve({ id, audioUrl, changes: this.changes });
       }
     );
+  });
+}
+
+// Social Interests CRUD operations
+export function getAllSocialInterests() {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT * FROM social_interests ORDER BY created_at ASC', (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+}
+
+export function getActiveSocialInterests() {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT * FROM social_interests WHERE is_active = 1 ORDER BY created_at ASC', (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+}
+
+export function addSocialInterest(name) {
+  return new Promise((resolve, reject) => {
+    db.run('INSERT INTO social_interests (name, is_active) VALUES (?, 1)', [name], function(err) {
+      if (err) reject(err);
+      else resolve({ id: this.lastID, name, is_active: 1 });
+    });
+  });
+}
+
+export function updateSocialInterest(id, name, isActive) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'UPDATE social_interests SET name = ?, is_active = ? WHERE id = ?',
+      [name, isActive, id],
+      function(err) {
+        if (err) reject(err);
+        else resolve({ id, name, is_active: isActive });
+      }
+    );
+  });
+}
+
+export function deleteSocialInterest(id) {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM social_interests WHERE id = ?', [id], function(err) {
+      if (err) reject(err);
+      else resolve({ deleted: this.changes });
+    });
+  });
+}
+
+// Social Articles CRUD operations
+export function saveSocialArticle(data) {
+  const { interestId, sourceUrl, title, content, author, publishDate, scrapedAt } = data;
+  return new Promise((resolve, reject) => {
+    db.run(
+      'INSERT INTO social_articles (interest_id, source_url, title, content, author, publish_date, scraped_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [interestId, sourceUrl, title, content, author, publishDate, scrapedAt],
+      function(err) {
+        if (err) reject(err);
+        else resolve({ id: this.lastID });
+      }
+    );
+  });
+}
+
+export function checkSocialArticleExists(sourceUrl) {
+  return new Promise((resolve, reject) => {
+    db.get(
+      'SELECT id FROM social_articles WHERE source_url = ?',
+      [sourceUrl],
+      (err, row) => {
+        if (err) reject(err);
+        else resolve(!!row);
+      }
+    );
+  });
+}
+
+export function getSocialArticleDates() {
+  return new Promise((resolve, reject) => {
+    db.all(
+      'SELECT DISTINCT scraped_at FROM social_articles ORDER BY scraped_at DESC',
+      (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows.map(row => row.scraped_at));
+      }
+    );
+  });
+}
+
+export function getSocialArticlesByDate(date) {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT sa.*, si.name as interest_name
+       FROM social_articles sa
+       JOIN social_interests si ON sa.interest_id = si.id
+       WHERE sa.scraped_at = ?
+       ORDER BY sa.created_at DESC`,
+      [date],
+      (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      }
+    );
+  });
+}
+
+export function getSocialArticleById(id) {
+  return new Promise((resolve, reject) => {
+    db.get(
+      `SELECT sa.*, si.name as interest_name
+       FROM social_articles sa
+       JOIN social_interests si ON sa.interest_id = si.id
+       WHERE sa.id = ?`,
+      [id],
+      (err, row) => {
+        if (err) reject(err);
+        else resolve(row || null);
+      }
+    );
+  });
+}
+
+export function updateSocialArticleSummary(id, summary) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'UPDATE social_articles SET summary = ? WHERE id = ?',
+      [summary, id],
+      function(err) {
+        if (err) reject(err);
+        else resolve({ id, summary, changes: this.changes });
+      }
+    );
+  });
+}
+
+export function deleteSocialArticle(id) {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM social_articles WHERE id = ?', [id], function(err) {
+      if (err) reject(err);
+      else resolve({ deleted: this.changes });
+    });
   });
 }
 

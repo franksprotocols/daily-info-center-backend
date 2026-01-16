@@ -7,6 +7,7 @@ import { initDatabase } from './database-selector.js';
 import topicsRouter from './routes/topics.js';
 import articlesRouter from './routes/articles.js';
 import generateRouter from './routes/generate.js';
+import socialRouter from './routes/social.js';
 
 // Load environment variables
 dotenv.config();
@@ -22,6 +23,7 @@ app.use(express.json());
 app.use('/api/topics', topicsRouter);
 app.use('/api/articles', articlesRouter);
 app.use('/api/generate', generateRouter);
+app.use('/api/social', socialRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
