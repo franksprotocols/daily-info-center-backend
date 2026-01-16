@@ -102,9 +102,14 @@ router.post('/submit', async (req, res) => {
       return res.status(409).json({ error: 'This URL has already been added' });
     }
 
-    // Scrape webpage content
+    // Scrape webpage content with timeout wrapper
     console.log(`Scraping URL: ${url}`);
-    const scrapedData = await scrapeWebpage(url.trim());
+    const scrapedData = await Promise.race([
+      scrapeWebpage(url.trim()),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Scraping timeout after 15 seconds')), 15000)
+      )
+    ]);
 
     // Save to database
     const today = new Date().toISOString().split('T')[0];
@@ -189,12 +194,17 @@ router.post('/article/:id/summary', async (req, res) => {
       });
     }
 
-    // Generate summary with Gemini
+    // Generate summary with Gemini with timeout wrapper
     console.log(`Generating summary for article ${id}...`);
 
     // Limit content length to save tokens
     const contentToSummarize = article.content.substring(0, 5000);
-    const summary = await generateSocialSummary(contentToSummarize);
+    const summary = await Promise.race([
+      generateSocialSummary(contentToSummarize),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Summary generation timeout after 30 seconds')), 30000)
+      )
+    ]);
 
     // Save summary to database
     await updateSocialArticleSummary(parseInt(id), summary);

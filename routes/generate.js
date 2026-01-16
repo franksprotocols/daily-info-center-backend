@@ -33,9 +33,14 @@ router.post('/', async (req, res) => {
             continue;
           }
 
-          // Generate article with Gemini (includes built-in search)
+          // Generate article with Gemini (includes built-in search) with timeout
           console.log(`  - Generating ${language === 'en' ? 'English' : 'Chinese'} article with Gemini AI...`);
-          const { headline, content, sources } = await generateArticle(topic.name, language);
+          const { headline, content, sources } = await Promise.race([
+            generateArticle(topic.name, language),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Article generation timeout after 120 seconds')), 120000)
+            )
+          ]);
 
           // Save to database (TTS will be handled in browser)
           console.log(`  - Saving ${language} article to database...`);

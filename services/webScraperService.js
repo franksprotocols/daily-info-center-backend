@@ -6,9 +6,12 @@ export async function scrapeWebpage(url) {
     // Fetch the webpage with timeout
     const response = await axios.get(url, {
       timeout: 10000,
+      maxContentLength: 5 * 1024 * 1024, // 5MB limit to prevent memory issues
+      maxBodyLength: 5 * 1024 * 1024,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
+      },
+      validateStatus: (status) => status < 500 // Don't throw on 4xx errors
     });
 
     const html = response.data;

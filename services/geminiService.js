@@ -39,6 +39,12 @@ Write the article now:`;
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
+
+    // Check if response is valid before processing
+    if (!response || typeof response.text !== 'function') {
+      throw new Error('Invalid response from Gemini API');
+    }
+
     const fullText = response.text();
 
     // Extract headline and content
@@ -83,6 +89,12 @@ Summary:`;
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
+
+    // Check if response is valid before processing
+    if (!response || typeof response.text !== 'function') {
+      throw new Error('Invalid response from Gemini API');
+    }
+
     const summary = response.text().trim();
 
     return summary;
