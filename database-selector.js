@@ -20,6 +20,7 @@ export const {
   deleteTopic,
   saveArticle,
   checkArticleExists,
+  deleteArticlesByDate,
   getAllDates,
   getArticlesByDate,
   getArticleById,

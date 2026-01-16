@@ -155,6 +155,14 @@ export async function checkArticleExists(date, topicId, language) {
   return rows.length > 0;
 }
 
+export async function deleteArticlesByDate(date) {
+  const { rowCount } = await pool.query(
+    'DELETE FROM articles WHERE date = $1',
+    [date]
+  );
+  return { deleted: rowCount };
+}
+
 export async function getAllDates() {
   const { rows } = await pool.query('SELECT DISTINCT date FROM articles ORDER BY date DESC');
   return rows.map(row => row.date);

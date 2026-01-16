@@ -1,5 +1,5 @@
 import express from 'express';
-import { getActiveTopics, saveArticle, checkArticleExists } from '../database-selector.js';
+import { getActiveTopics, saveArticle, checkArticleExists, deleteArticlesByDate } from '../database-selector.js';
 import { generateArticle } from '../services/geminiService.js';
 
 const router = express.Router();
@@ -15,8 +15,16 @@ router.post('/', async (req, res) => {
 
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     const results = [];
+    const forceRegenerate = req.query.force === 'true'; // Allow force regeneration via ?force=true
 
-    console.log(`Starting article generation for ${topics.length} topics...`);
+    console.log(`Starting article generation for ${topics.length} topics${forceRegenerate ? ' (FORCE MODE - will overwrite existing)' : ''}...`);
+
+    // If force mode, delete all existing articles for today first
+    if (forceRegenerate) {
+      console.log(`Deleting existing articles for ${today}...`);
+      const deleteResult = await deleteArticlesByDate(today);
+      console.log(`Deleted ${deleteResult.deleted} existing articles`);
+    }
 
     for (const topic of topics) {
       // Generate both English and Chinese versions
@@ -26,11 +34,13 @@ router.post('/', async (req, res) => {
         try {
           console.log(`Processing topic: ${topic.name} (${language})`);
 
-          // Check if article already exists
-          const exists = await checkArticleExists(today, topic.id, language);
-          if (exists) {
-            console.log(`  - Article already exists for ${topic.name} (${language}), skipping...`);
-            continue;
+          // Check if article already exists (skip check if force=true)
+          if (!forceRegenerate) {
+            const exists = await checkArticleExists(today, topic.id, language);
+            if (exists) {
+              console.log(`  - Article already exists for ${topic.name} (${language}), skipping...`);
+              continue;
+            }
           }
 
           // Generate article with Gemini (includes built-in search) with timeout

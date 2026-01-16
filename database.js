@@ -162,6 +162,19 @@ export function checkArticleExists(date, topicId, language) {
   });
 }
 
+export function deleteArticlesByDate(date) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'DELETE FROM articles WHERE date = ?',
+      [date],
+      function(err) {
+        if (err) reject(err);
+        else resolve({ deleted: this.changes });
+      }
+    );
+  });
+}
+
 export function getAllDates() {
   return new Promise((resolve, reject) => {
     db.all(
