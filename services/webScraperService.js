@@ -1,7 +1,19 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { scrapeUrlWithGemini } from './geminiService.js';
 
 export async function scrapeWebpage(url) {
+  // Try Gemini first (most reliable, bypasses anti-bot protections)
+  try {
+    console.log('Attempting to scrape with Gemini AI...');
+    const result = await scrapeUrlWithGemini(url);
+    console.log('Successfully scraped with Gemini AI');
+    return result;
+  } catch (geminiError) {
+    console.log('Gemini scraping failed, trying direct scraping...', geminiError.message);
+  }
+
+  // Fallback to direct scraping
   try {
     // Fetch the webpage with timeout
     const response = await axios.get(url, {
