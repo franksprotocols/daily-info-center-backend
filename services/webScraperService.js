@@ -157,7 +157,7 @@ async function scrapeWithJinaAI(url) {
   try {
     const jinaUrl = `https://r.jina.ai/${url}`;
     const response = await axios.get(jinaUrl, {
-      timeout: 15000,
+      timeout: 45000, // Increased to 45s for WeChat articles
       headers: {
         'Accept': 'application/json',
         'X-Return-Format': 'markdown'

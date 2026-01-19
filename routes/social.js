@@ -102,12 +102,12 @@ router.post('/submit', async (req, res) => {
       return res.status(409).json({ error: 'This URL has already been added' });
     }
 
-    // Scrape webpage content with timeout wrapper
+    // Scrape webpage content with timeout wrapper (increased for WeChat articles)
     console.log(`Scraping URL: ${url}`);
     const scrapedData = await Promise.race([
       scrapeWebpage(url.trim()),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Scraping timeout after 15 seconds')), 15000)
+        setTimeout(() => reject(new Error('Scraping timeout after 60 seconds')), 60000)
       )
     ]);
 
