@@ -3,18 +3,42 @@ import * as cheerio from 'cheerio';
 import { scrapeUrlWithGemini } from './geminiService.js';
 
 export async function scrapeWebpage(url) {
-  // Try Gemini first (most reliable, bypasses anti-bot protections)
+  // For WeChat articles, use Jina AI Reader first (more reliable for Chinese content)
+  if (url.includes('mp.weixin.qq.com')) {
+    try {
+      console.log('WeChat article detected, using Jina AI Reader...');
+      const result = await scrapeWithJinaAI(url);
+      console.log('Successfully scraped WeChat article with Jina AI');
+      return result;
+    } catch (jinaError) {
+      console.log('Jina AI failed for WeChat article, trying direct scraping...', jinaError.message);
+    }
+  }
+
+  // Try direct scraping first for better accuracy
+  try {
+    console.log('Attempting direct HTML scraping...');
+    const result = await directScrape(url);
+    console.log('Successfully scraped with direct method');
+    return result;
+  } catch (directError) {
+    console.log('Direct scraping failed, trying Gemini AI...', directError.message);
+  }
+
+  // Fallback to Gemini (less reliable but works when others fail)
   try {
     console.log('Attempting to scrape with Gemini AI...');
     const result = await scrapeUrlWithGemini(url);
     console.log('Successfully scraped with Gemini AI');
     return result;
   } catch (geminiError) {
-    console.log('Gemini scraping failed, trying direct scraping...', geminiError.message);
+    console.log('Gemini scraping failed:', geminiError.message);
+    throw new Error('All scraping methods failed. This URL cannot be accessed.');
   }
+}
 
-  // Fallback to direct scraping
-  try {
+// Direct scraping implementation
+async function directScrape(url) {
     // Fetch the webpage with timeout
     const response = await axios.get(url, {
       timeout: 10000,
@@ -38,8 +62,10 @@ export async function scrapeWebpage(url) {
     const html = response.data;
     const $ = cheerio.load(html);
 
-    // Extract title - try multiple sources
+    // Extract title - try multiple sources (WeChat-specific first)
     let title = $('meta[property="og:title"]').attr('content') ||
+                $('#activity-name').text() || // WeChat specific
+                $('.rich_media_title').text() || // WeChat specific
                 $('meta[name="twitter:title"]').attr('content') ||
                 $('title').text() ||
                 $('h1').first().text() ||
@@ -47,8 +73,10 @@ export async function scrapeWebpage(url) {
 
     title = title.trim();
 
-    // Extract author
-    let author = $('meta[name="author"]').attr('content') ||
+    // Extract author (WeChat-specific selectors added)
+    let author = $('#js_name').text() || // WeChat author
+                 $('.rich_media_meta_nickname').text() || // WeChat author
+                 $('meta[name="author"]').attr('content') ||
                  $('meta[property="article:author"]').attr('content') ||
                  $('.author').first().text() ||
                  $('[rel="author"]').first().text() ||
@@ -58,8 +86,9 @@ export async function scrapeWebpage(url) {
       author = author.trim();
     }
 
-    // Extract publish date
-    let publishDate = $('meta[property="article:published_time"]').attr('content') ||
+    // Extract publish date (WeChat-specific added)
+    let publishDate = $('#publish_time').text() || // WeChat date
+                      $('meta[property="article:published_time"]').attr('content') ||
                       $('meta[name="publish_date"]').attr('content') ||
                       $('time[datetime]').first().attr('datetime') ||
                       null;
@@ -75,8 +104,10 @@ export async function scrapeWebpage(url) {
     // Remove unwanted elements
     $('script, style, nav, header, footer, aside, .ad, .advertisement, .social-share').remove();
 
-    // Try to find the main article content
+    // Try to find the main article content (WeChat-specific selectors first)
     const articleSelectors = [
+      '#js_content', // WeChat article content (MOST IMPORTANT)
+      '.rich_media_content', // WeChat content
       'article',
       '[role="main"]',
       'main',
@@ -119,34 +150,6 @@ export async function scrapeWebpage(url) {
       author,
       publishDate
     };
-
-  } catch (error) {
-    console.error('Web scraping error:', error.message);
-
-    // Provide user-friendly error messages
-    if (error.code === 'ENOTFOUND') {
-      throw new Error('Unable to reach the URL. Please check if the URL is correct.');
-    } else if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
-      throw new Error('Request timed out. The website may be slow or unavailable.');
-    } else if (error.response) {
-      if (error.response.status === 404) {
-        throw new Error('Page not found (404). Please check the URL.');
-      } else if (error.response.status === 403) {
-        // Try using Jina AI Reader as fallback for blocked sites
-        try {
-          console.log('Direct scraping blocked, trying Jina AI Reader...');
-          return await scrapeWithJinaAI(url);
-        } catch (jinaError) {
-          console.error('Jina AI fallback failed:', jinaError.message);
-          throw new Error('Access denied - the website is blocking automated access. This site cannot be scraped at this time.');
-        }
-      } else if (error.response.status >= 500) {
-        throw new Error('The website is currently experiencing issues. Please try again later.');
-      }
-    }
-
-    throw new Error(error.message || 'Failed to scrape webpage');
-  }
 }
 
 // Fallback scraper using Jina AI Reader (free API, no key needed)
